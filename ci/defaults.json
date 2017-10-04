@@ -1,0 +1,42 @@
+[
+    {
+        "ParameterKey": "AvailabilityZones",
+        "ParameterValue": "$[alfred_getaz_2]"
+    },
+    {
+        "ParameterKey": "Company",
+        "ParameterValue": "MyCompanyName"
+    },
+    {
+        "ParameterKey": "Email",
+        "ParameterValue": "email@example.com"
+    },
+    {
+        "ParameterKey": "Firstname",
+        "ParameterValue": "MyFirstName"
+    },
+    {
+        "ParameterKey": "KeyPairName",
+        "ParameterValue": "$[alfred_getkeypair]"
+    },
+    {
+        "ParameterKey": "Lastname",
+        "ParameterValue": "MyLastName"
+    },
+    {
+        "ParameterKey": "OrderTable",
+        "ParameterValue": "$[taskcat_genuuid]"
+    },
+    {
+        "ParameterKey": "ProductTable",
+        "ParameterValue": "$[taskcat_genuuid]"
+    },
+    {
+        "ParameterKey": "TenantTable",
+        "ParameterValue": "$[taskcat_genuuid]"
+    },
+    {
+        "ParameterKey": "UserTable",
+        "ParameterValue": "$[taskcat_genuuid]"
+    }
+]

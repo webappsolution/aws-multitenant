@@ -1,0 +1,24 @@
+{
+  "name": "API Gateway - Cognito - Custom Authorizer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Amazon Web Services",
+  "contributors": [
+    {
+      "name": "Tod Golding"
+    },
+    {
+      "name": "Judah Bernstein"
+    }
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "jsonwebtoken": "^7.3.0",
+    "jwk-to-pem": "^1.2.6",
+    "request": "^2.81.0"
+  }
+}
