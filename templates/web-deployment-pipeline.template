@@ -11,6 +11,8 @@ Parameters:
     Type: String
   ServiceName:
     Type: String
+  WaitURL:
+    Type: String
 Resources:
   WebBucket:
     Type: AWS::S3::Bucket
@@ -165,7 +167,8 @@ Resources:
                 - pwd
                 - ls -al
                 - aws s3 cp --recursive ./dist s3://"${WEBSITE_BUCKET}" --acl public-read
-                - cd dist
+                - cd ../
+                - curl -T body.json "${WAIT_HANDLE}"
                 - ls -al
                 - echo BuildCompleted
       Environment:
@@ -181,6 +184,8 @@ Resources:
           Value: !Ref WebBucket
         - Name: SERVICE_URL
           Value: !Ref ServiceUrl
+        - Name: WAIT_HANDLE
+          Value: !Ref WaitURL
       Name: !Ref AWS::StackName
       ServiceRole: !Ref CodeBuildServiceRole
   Pipeline:

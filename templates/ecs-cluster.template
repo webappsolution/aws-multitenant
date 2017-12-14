@@ -11,7 +11,6 @@ Parameters:
   InstanceType:
     Description: Which instance type should we use to build the ECS cluster?
     Type: String
-    Default: t2.small
   ClusterSize:
     Description: How many ECS hosts do you want to initially deploy?
     Type: Number

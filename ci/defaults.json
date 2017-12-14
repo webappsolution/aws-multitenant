@@ -36,6 +36,10 @@
         "ParameterValue": "$[taskcat_genuuid]"
     },
     {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.micro"
+    },
+    {
         "ParameterKey": "UserTable",
         "ParameterValue": "$[taskcat_genuuid]"
     }

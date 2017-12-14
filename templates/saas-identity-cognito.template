@@ -26,6 +26,7 @@ Metadata:
         default: SaaS Identity Quick Start Configuration
       Parameters:
       - KeyPairName
+      - InstanceType
     - Label:
         default: SaaS Identity Sys Admin Configuration
       Parameters:
@@ -45,6 +46,8 @@ Metadata:
         default: Availability Zones
       KeyPairName:
         default: Key Pair Name
+      InstanceType:
+        default: Instance Type
       PrivateSubnet1ID:
         default: Private Subnet 1 ID
       PrivateSubnet2ID:
@@ -80,6 +83,14 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Public/private key pairs allow you to securely connect to your instance
       after it launches
+  InstanceType:
+    Type: String
+    Default: t2.small
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.large
+    Description: Enter t2.micro, t2.small, or t2.large. Default is t2.small.
   VPCID:
     Type: AWS::EC2::VPC::Id
     Description: The ID of the VPC.
@@ -191,7 +202,7 @@ Resources:
       TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/ecs-cluster.template
       Parameters:
         EnvironmentName: !Ref AWS::StackName
-        InstanceType: t2.large
+        InstanceType: !Ref InstanceType
         ClusterSize: 4
         VPC: !Ref VPCID
         KeyName: !Ref KeyPairName
@@ -226,6 +237,8 @@ Resources:
         ServiceUrl: !GetAtt ALB.Outputs.LoadBalancerUrl
         S3Bucket: !GetAtt ZipFiles.Outputs.AssetBucket
         S3BucketPrefix: !Ref QSS3KeyPrefix
+  WaitHandleWebClient:
+    Type: AWS::CloudFormation::WaitConditionHandle
   WebClient:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -235,6 +248,16 @@ Resources:
         ServiceName: client
         TemplateBucket: !GetAtt ZipFiles.Outputs.AssetBucket
         TemplatePrefix: !Ref QSS3KeyPrefix
+        WaitURL: !Ref WaitHandleWebClient
+  WaitConditionWebClient:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn:
+    - WebClient
+    Properties:
+      Handle:
+        Ref: WaitHandleWebClient
+      Timeout: '3600'
+      Count: '1'
   WebPerm:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -254,10 +277,25 @@ Resources:
         TenantTableName: !Ref TenantTable
         ProductTableName: !Ref ProductTable
         OrderTableName: !Ref OrderTable
-  WaitHandle:
+  WaitHandleUserService:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  WaitHandleAuthService:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  WaitHandleTenantService:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  WaitHandleRegService:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  WaitHandleSysService:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  WaitHandleProductService:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  WaitHandleOrderService:
     Type: AWS::CloudFormation::WaitConditionHandle
   UserService:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - WebClient
+    - WaitConditionWebClient
     Properties:
       TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/deployment-pipeline-test.template
       Parameters:
@@ -277,12 +315,15 @@ Resources:
         ContainerPort: 3001
         TemplateBucket: !GetAtt ZipFiles.Outputs.AssetBucket
         TemplatePrefix: !Ref QSS3KeyPrefix
-        WaitURL: !Ref WaitHandle
+        WaitURL: !Ref WaitHandleUserService
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
   AuthService:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - UserService
+    - WaitConditionUserService
     Properties:
       TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/deployment-pipeline-test.template
       Parameters:
@@ -302,12 +343,15 @@ Resources:
         ContainerPort: 3000
         TemplateBucket: !GetAtt ZipFiles.Outputs.AssetBucket
         TemplatePrefix: !Ref QSS3KeyPrefix
-        WaitURL: !Ref WaitHandle
+        WaitURL: !Ref WaitHandleAuthService
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
   TenantService:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - AuthService
+    - WaitConditionAuthService
     Properties:
       TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/deployment-pipeline-test.template
       Parameters:
@@ -327,12 +371,15 @@ Resources:
         ContainerPort: 3003
         TemplateBucket: !GetAtt ZipFiles.Outputs.AssetBucket
         TemplatePrefix: !Ref QSS3KeyPrefix
-        WaitURL: !Ref WaitHandle
+        WaitURL: !Ref WaitHandleTenantService
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
   RegService:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - TenantService
+    - WaitConditionTenantService
     Properties:
       TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/deployment-pipeline-test.template
       Parameters:
@@ -352,12 +399,15 @@ Resources:
         ContainerPort: 3004
         TemplateBucket: !GetAtt ZipFiles.Outputs.AssetBucket
         TemplatePrefix: !Ref QSS3KeyPrefix
-        WaitURL: !Ref WaitHandle
+        WaitURL: !Ref WaitHandleRegService
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
   SysService:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - RegService
+    - WaitConditionRegService
     Properties:
       TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/deployment-pipeline-test.template
       Parameters:
@@ -377,12 +427,15 @@ Resources:
         ContainerPort: 3011
         TemplateBucket: !GetAtt ZipFiles.Outputs.AssetBucket
         TemplatePrefix: !Ref QSS3KeyPrefix
-        WaitURL: !Ref WaitHandle
+        WaitURL: !Ref WaitHandleSysService
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
   ProductService:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - SysService
+    - WaitConditionSysService
     Properties:
       TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/deployment-pipeline-test.template
       Parameters:
@@ -402,12 +455,15 @@ Resources:
         ContainerPort: 3006
         TemplateBucket: !GetAtt ZipFiles.Outputs.AssetBucket
         TemplatePrefix: !Ref QSS3KeyPrefix
-        WaitURL: !Ref WaitHandle
+        WaitURL: !Ref WaitHandleProductService
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
   OrderService:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - ProductService
+    - WaitConditionProductService
     Properties:
       TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/deployment-pipeline-test.template
       Parameters:
@@ -427,25 +483,73 @@ Resources:
         ContainerPort: 3015
         TemplateBucket: !GetAtt ZipFiles.Outputs.AssetBucket
         TemplatePrefix: !Ref QSS3KeyPrefix
-        WaitURL: !Ref WaitHandle
+        WaitURL: !Ref WaitHandleOrderService
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
-  WaitCondition:
+  WaitConditionUserService:
     Type: AWS::CloudFormation::WaitCondition
     DependsOn:
     - UserService
+    Properties:
+      Handle:
+        Ref: WaitHandleUserService
+      Timeout: '3600'
+      Count: '1'
+  WaitConditionAuthService:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn:
     - AuthService
+    Properties:
+      Handle:
+        Ref: WaitHandleAuthService
+      Timeout: '3600'
+      Count: '1'
+  WaitConditionTenantService:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn:
     - TenantService
+    Properties:
+      Handle:
+        Ref: WaitHandleTenantService
+      Timeout: '3600'
+      Count: '1'
+  WaitConditionRegService:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn:
     - RegService
+    Properties:
+      Handle:
+        Ref: WaitHandleRegService
+      Timeout: '3600'
+      Count: '1'
+  WaitConditionSysService:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn:
     - SysService
+    Properties:
+      Handle:
+        Ref: WaitHandleSysService
+      Timeout: '3600'
+      Count: '1'
+  WaitConditionProductService:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn:
     - ProductService
+    Properties:
+      Handle:
+        Ref: WaitHandleProductService
+      Timeout: '3600'
+      Count: '1'
+  WaitConditionOrderService:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn:
     - OrderService
     Properties:
       Handle:
-        Ref: WaitHandle
+        Ref: WaitHandleOrderService
       Timeout: '3600'
-      Count: '7'
+      Count: '1'
   UserServiceCleanup:
     Type: AWS::CloudFormation::Stack
     DependsOn: Role
@@ -540,7 +644,13 @@ Resources:
   SysAdmin:
     Type: AWS::CloudFormation::Stack
     DependsOn:
-    - WaitCondition
+    - WaitConditionUserService
+    - WaitConditionAuthService
+    - WaitConditionTenantService
+    - WaitConditionRegService
+    - WaitConditionSysService
+    - WaitConditionProductService
+    - WaitConditionOrderService
     - UserService
     - AuthService
     - TenantService
@@ -563,7 +673,13 @@ Resources:
   SysAdminCleanup:
     Type: AWS::CloudFormation::Stack
     DependsOn:
-    - WaitCondition
+    - WaitConditionUserService
+    - WaitConditionAuthService
+    - WaitConditionTenantService
+    - WaitConditionRegService
+    - WaitConditionSysService
+    - WaitConditionProductService
+    - WaitConditionOrderService
     - UserService
     - AuthService
     - TenantService
