@@ -13,6 +13,6 @@ global:
     - us-west-2
   reporting: true
 tests:
-  defaults:
+  saas-id-cognito:
     parameter_input: defaults.json
     template_file: saas-identity-cognito-master.template
