@@ -1,5 +1,5 @@
 {
-  "name": "API Gateway - Cognito - Custom Authorizer",
+  "name": "API-Gateway-Cognito-Custom-Authorizer",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
