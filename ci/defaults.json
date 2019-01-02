@@ -42,5 +42,9 @@
     {
         "ParameterKey": "UserTable",
         "ParameterValue": "$[taskcat_genuuid]"
+    },
+    {
+        "ParameterKey": "QSS3BucketName",
+        "ParameterValue": "$[taskcat_autobucket]"
     }
 ]
