@@ -1,0 +1,23 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: This CloudFormation Template creates the ECR Repository and Artifact
+  Bucket for the Docker Pipeline.
+Resources:
+  # Creates and ECR repo
+  Repository:
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecr-repository.html
+    # NOTE: there is no name given. Read docs regarding why this is being done
+    Type: AWS::ECR::Repository
+  # Create a bucket for the docker images
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+Outputs:
+  ArtifactBucket:
+    Value: !Ref ArtifactBucket
+  Repository:
+    Value: !Ref Repository
+...

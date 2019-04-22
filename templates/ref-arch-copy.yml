@@ -1,0 +1,49 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: This CloudFormation Template invokes another template responsible for
+  copying files to a local region S3 Bucket for Lambda.
+# OPTIONAL Parameters section to customize your templates.
+# Parameters enable you to input custom values to your template each
+# time you create or update a stack.   
+Parameters:
+  QSS3BucketName:
+    Description: The Template Bucket Name.
+    Type: String
+  QSS3KeyPrefix:
+    Description: The Template Bucket Prefix.
+    Type: String
+  RoleArn:
+    Description: The ARN of the role required for copying files.
+    Type: String
+# REQUIRED Resources section declares the AWS resources that you want to
+# include in the stack, such as an Amazon EC2 instance or an Amazon S3 bucket.    
+Resources:
+  # This creates a bucket to copy files into via the next resource.
+  # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
+  DestinationBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      # NOTE: no bucket name so S3 will generate for you
+      VersioningConfiguration:
+        Status: Enabled
+  # This resource defines a stack using the referenced template. I
+  CopyFiles:
+    Type: AWS::CloudFormation::Stack
+    # Requires the previous bucket is created
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-dependson.html
+    DependsOn: DestinationBucket
+    Properties:
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-copy-files.template
+      Parameters:
+        # NOTE: all of the values are passed in from infrastructure template
+        TemplateBucket: !Ref QSS3BucketName
+        TemplatePrefix: !Ref QSS3KeyPrefix
+        DestinationBucket: !Ref DestinationBucket
+        RoleArn: !Ref RoleArn
+# Make the bucket visible to the caller
+Outputs:
+  AssetBucket:
+    Value: !Ref DestinationBucket
+    Description: Bucket with Zip Files
+...

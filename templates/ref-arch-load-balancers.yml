@@ -1,0 +1,66 @@
+---
+Description: This template deploys an Application Load Balancer that exposes the micro-services
+  in an ECS Cluster.
+# OPTIONAL Parameters section to customize your templates. 
+# Parameters enable you to input custom values to your template each 
+# time you create or update a stack.  
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: Choose which VPC the Applicaion Load Balancer should be deployed
+      to
+  Subnets:
+    Description: Choose which subnets the Applicaion Load Balancer should be deployed
+      to
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroup:
+    Description: Select the Security Group to apply to the Applicaion Load Balancer
+    Type: AWS::EC2::SecurityGroup::Id
+# REQUIRED Resources section declares the AWS resources that you want to 
+# include in the stack, such as an Amazon EC2 instance or an Amazon S3 bucket.    
+Resources:
+  LoadBalancer:
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb.html
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      # This will be the public subnets
+      Subnets: !Ref Subnets
+      SecurityGroups:
+      - !Ref SecurityGroup
+      Tags:
+      - Key: Name
+        Value: !Ref EnvironmentName
+  LoadBalancerListener:
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-listener.html
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      # TODOD: TJM SHOULD HAVE CERTS AND COME IN OVER HTTPS
+      Protocol: HTTP
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref DefaultTargetGroup
+  DefaultTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VPC
+      Port: 80
+      # TODOD: TJM SHOULD HAVE CERTS AND COME IN OVER HTTPS
+      Protocol: HTTP
+Outputs:
+  LoadBalancer:
+    Description: A reference to the Application Load Balancer
+    Value: !Ref LoadBalancer
+  LoadBalancerUrl:
+    Description: The URL of the ALB
+    Value: !GetAtt LoadBalancer.DNSName
+  Listener:
+    Description: A reference to a port 80 listener
+    Value: !Ref LoadBalancerListener
+  TargetGroup:
+    Value: !Ref DefaultTargetGroup
+

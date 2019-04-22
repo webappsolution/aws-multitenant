@@ -1,0 +1,335 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: This CloudFormation Template creates the CD & CI Pipeline for the Docker
+  Containers
+Parameters:
+  Cluster:
+    Type: String
+  TemplateBucket:
+    Type: String
+  TemplatePrefix:
+    Type: String
+  VPC:
+    Type: AWS::EC2::VPC::Id
+  ServiceUrl:
+    Type: String
+  SnsRole:
+    Type: String
+  UserTable:
+    Type: String
+  TenantTable:
+    Type: String
+  Listener:
+    Type: String
+  Path:
+    Type: String
+  HealthCheck:
+    Type: String
+  ServiceName:
+    Type: String
+  Priority:
+    Type: String
+  ContainerPort:
+    Type: String
+  WaitURL:
+    Type: String
+  CloudFormationExecutionRole:
+    Type: String
+  Repository:
+    Type: String
+  ArtifactBucket:
+    Type: String
+Resources:
+  # Create role that gives codebuild access to logs, ecr, and S3
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: codebuild.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Resource: '*'
+            Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - ecr:GetAuthorizationToken
+          - Resource: !Sub arn:aws:s3:::${ArtifactBucket}/*
+            Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:GetObjectVersion
+          - Resource: !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${Repository}
+            Effect: Allow
+            Action:
+            - ecr:GetDownloadUrlForLayer
+            - ecr:BatchGetImage
+            - ecr:BatchCheckLayerAvailability
+            - ecr:PutImage
+            - ecr:InitiateLayerUpload
+            - ecr:UploadLayerPart
+            - ecr:CompleteLayerUpload
+  # Create role that gives codepipeline access to logs, S3, codebuild, cf, ec2, iam, and elb
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: codepipeline.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Resource:
+            - !Sub arn:aws:s3:::${ArtifactBucket}/*
+            - !Sub arn:aws:s3:::${ArtifactBucket}
+            - !Sub arn:aws:s3:::${TemplateBucket}
+            - !Sub arn:aws:s3:::${TemplateBucket}/*
+            Effect: Allow
+            Action:
+            - s3:*
+          - Resource: '*'
+            Effect: Allow
+            Action:
+            - codebuild:StartBuild
+            - codebuild:BatchGetBuilds
+            - cloudformation:*
+            - iam:PassRole
+            - ec2:*
+            - elasticloadbalancing:*
+            - logs:*
+  # Creates a codebuild project to build a specific docker image and push to repo           
+  CodeBuildProject:
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-codebuild-project.html
+    Type: AWS::CodeBuild::Project
+    DependsOn:
+    - CodeBuildServiceRole
+    Properties:
+      Name: !Sub ${AWS::StackName}-BuildProject
+      Artifacts:
+        Location: !Ref ArtifactBucket
+        Type: S3
+      Source:
+        Location: !Sub ${ArtifactBucket}/source.zip
+        Type: S3
+        BuildSpec: |
+          version: 0.2
+          phases:
+            pre_build:
+              commands:
+                - ls -al
+                - $(aws ecr get-login)
+                - TAG="$SERVICE_NAME"
+            build:
+              commands:
+                - docker build --tag "${REPOSITORY_URI}:${TAG}" .
+            post_build:
+              commands:
+                - docker push "${REPOSITORY_URI}:${TAG}"
+                - printf '{"tag":"%s"}' $TAG > build.json
+          artifacts:
+            files: build.json
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/docker:1.12.1
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+        - Name: AWS_DEFAULT_REGION
+          Value: !Ref AWS::Region
+        - Name: SERVICE_NAME
+          Value: !Ref ServiceName
+        - Name: REPOSITORY_URI
+          Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Repository}
+      ServiceRole: !Ref CodeBuildServiceRole
+      TimeoutInMinutes: 120
+  # Creates a codebuild project to simply ping the health check endpoint of the previous build
+  TestProject:
+    Type: AWS::CodeBuild::Project
+    DependsOn:
+    - CodeBuildServiceRole
+    Properties:
+      Name: !Sub ${AWS::StackName}-TestProject
+      Artifacts:
+        Location: !Ref ArtifactBucket
+        Type: S3
+      Source:
+        Location: !Sub ${ArtifactBucket}/source.zip
+        Type: S3
+        BuildSpec: |
+          version: 0.2
+          phases:
+            pre_build:
+              commands:
+                - sudo apt-get update && sudo apt-get install -y curl
+            build:
+              commands:
+                - echo $SERVICE_URL
+                - echo $HEALTH_CHECK
+                - CODE="$(curl -s -o /dev/null -w "%{http_code}" https://"${SERVICE_URL}""${HEALTH_CHECK}")"
+                - echo $CODE
+                - if [ $CODE -eq 200 ]; then echo 'SUCCESS'; else exit 1; fi
+            post_build:
+              commands:
+                - echo "Test Completed"
+                - ls -al
+                - curl -T body.json "${WAIT_HANDLE}"
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/ubuntu-base:14.04
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+        - Name: AWS_DEFAULT_REGION
+          Value: !Ref AWS::Region
+        - Name: SERVICE_NAME
+          Value: !Ref ServiceName
+        - Name: SERVICE_URL
+          Value: !Ref ServiceUrl
+        - Name: HEALTH_CHECK
+          Value: !Ref HealthCheck
+        - Name: WAIT_HANDLE
+          Value: !Ref WaitURL
+      ServiceRole: !Ref CodeBuildServiceRole
+      TimeoutInMinutes: 120
+  # Creates a pipeline to build and deploy the EC2 infrastructure with docker images installed
+  # and run the test ping of the health end point
+  Pipeline:
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-codepipeline-pipeline.html
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+    - CodePipelineServiceRole
+    Properties:
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Stages:
+      # The Source stage detects changes to the {ServiceName}.zip file in the Bucket path and pulls it 
+      # into the Pipeline. It will be known as App and is of the Source Category type targeting S3.
+      # It will do the same for the service.template.zip file in the Bucket path. It will be known as Template and is a Source CT
+      # This zip contains a CF template that spins up an ECS Service, Task Definition, Target Group, 
+      # and ALB Path for the micro service being built.
+      - Name: Source
+        Actions:
+        - Name: App
+          # see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-codepipeline-pipeline-stages-actions-actiontypeid.html
+          ActionTypeId:
+            # see https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#actions-valid-providers
+            Category: Source
+            Owner: AWS
+            Version: 1
+            # Since the Pipeline is created in CF, PolForSourceChanges is set to true for S3 provider
+            Provider: S3
+          OutputArtifacts:
+          - Name: App
+          RunOrder: 1
+          Configuration:
+            S3Bucket: !Sub ${TemplateBucket}
+            S3ObjectKey: !Sub ${TemplatePrefix}/app/packages/${ServiceName}/${ServiceName}.zip
+        - Name: Template
+          ActionTypeId:
+            Category: Source
+            Owner: AWS
+            Version: 1
+            Provider: S3
+          OutputArtifacts:
+          - Name: Template
+          RunOrder: 1
+          Configuration:
+            S3Bucket: !Sub ${TemplateBucket}
+            S3ObjectKey: !Sub ${TemplatePrefix}/templates/service.template.zip
+      # The Build stage is a Build Category type targeting CodeBuild. It uses the CodeBuildProject resource as it's configuration
+      # It will use the Source Action known as App for input and output a resource named BuildOutput
+      - Name: Build
+        Actions:
+        - Name: Build
+          ActionTypeId:
+            Category: Build
+            Owner: AWS
+            Version: 1
+            Provider: CodeBuild
+          Configuration:
+            ProjectName: !Ref CodeBuildProject
+          InputArtifacts:
+          - Name: App
+          OutputArtifacts:
+          - Name: BuildOutput
+          RunOrder: 1
+      # The Deploy stage is a Deploy Category using CF as it's provider. It will create a Stack for deploy if it doesn't exist
+      # or update it if it does. It will use the Template resource from Source stage and BuildOuput from Build stage along 
+      # with the service.template and config.template files to deploy the micro service according to the Template source   
+      - Name: Deploy
+        Actions:
+        - Name: Deploy
+          ActionTypeId:
+            Category: Deploy
+            Owner: AWS
+            Version: 1
+            Provider: CloudFormation
+          # see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
+          Configuration:
+            ChangeSetName: Deploy
+            ActionMode: CREATE_UPDATE
+            StackName: !Sub ${AWS::StackName}-Service
+            Capabilities: CAPABILITY_IAM
+            TemplatePath: Template::service.template
+            TemplateConfiguration: Template::config.template
+            RoleArn: !Ref CloudFormationExecutionRole
+            ParameterOverrides: !Sub |
+              {
+                "Cluster": "${Cluster}",
+                "VPC": "${VPC}",
+                "ServiceUrl": "${ServiceUrl}",
+                "UserTable": "${UserTable}",
+                "TenantTable": "${TenantTable}",
+                "SnsRole": "${SnsRole}",
+                "Path": "${Path}",
+                "HealthCheck": "${HealthCheck}",
+                "Listener": "${Listener}",
+                "ServiceName": "${ServiceName}",
+                "Priority": "${Priority}",
+                "ContainerPort": "${ContainerPort}",
+                "Repository": "${Repository}"
+              }
+          InputArtifacts:
+          - Name: Template
+          - Name: BuildOutput
+          RunOrder: 1
+      # The Test stage is a Test Category that uses CodeBuild as it's provider. It will build the TestProject resource for it's 
+      # configuration and the App Source as it's input. This will essentially test the health of the deployed micro service
+      # and trigger to the parent Stack that Waits are complete.
+      - Name: Test
+        Actions:
+        - Name: Test
+          ActionTypeId:
+            Category: Test
+            Owner: AWS
+            Version: 1
+            Provider: CodeBuild
+          Configuration:
+            ProjectName: !Ref TestProject
+          InputArtifacts:
+          - Name: App
+          RunOrder: 1
+Outputs:
+  PipelineUrl:
+    Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
+  ServiceStack:
+    Value: !Sub ${AWS::StackName}-Service
+...

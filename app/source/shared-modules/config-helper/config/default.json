@@ -10,9 +10,7 @@
         "user": 3001,
         "tenant": 3003,
         "reg": 3004,
-        "sys": 3011,
-        "product": 3006,
-        "order": 3015
+        "sys": 301
       },
         "role": {
           "sns":""
@@ -22,14 +20,10 @@
         "user": "User Manager",
         "tenant": "Tenant Manager",
         "reg": "Tenant Registration Manager",
-        "sys": "System Registration Manager",
-        "product": "Product Manager",
-        "order": "Order Manager"
+        "sys": "System Registration Manager"
       },
       "table": {
         "user": "User",
-        "order": "Order",
-        "product": "Product",
         "tenant": "Tenant"
       },
       "userRole": {
@@ -52,23 +46,17 @@
         "user": 3001,
         "tenant": 3003,
         "reg": 3004,
-        "sys": 3011,
-        "product": 3006,
-        "order": 3015
+        "sys": 3011
       },
       "name": {
         "auth": "Authentication Manager",
         "user": "User Manager",
         "tenant": "Tenant Manager",
         "reg": "Tenant Registration Manager",
-        "sys": "System Registration Manager",
-        "product": "Product Manager",
-        "order": "Order Manager"
+        "sys": "System Registration Manager"
       },
       "table": {
         "user": "User",
-        "order": "Order",
-        "product": "Product",
         "tenant": "Tenant"
       },
       "userRole": {

@@ -1,0 +1,277 @@
+---
+Description: This template deploys an ECS cluster to the provided VPC and subnets using
+  an Auto Scaling Group
+# OPTIONAL Parameters section to customize your templates.
+# Parameters enable you to input custom values to your template each
+# time you create or update a stack.  
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+  InstanceType:
+    Description: Which instance type should we use to build the ECS cluster?
+    Type: String
+  ClusterSize:
+    Description: How many ECS hosts do you want to initially deploy?
+    Type: Number
+    Default: 4
+  VPC:
+    Description: Choose which VPC this ECS cluster should be deployed to
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Description: Choose which subnets this ECS cluster should be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroup:
+    Description: Select the Security Group to use for the ECS cluster hosts
+    Type: AWS::EC2::SecurityGroup::Id
+# OPTIONAL Mappings section matches a key to a corresponding set of named values. 
+# For example, if you want to set values based on a region, you can create a mapping that 
+# uses the region name as a key and contains the values you want to specify for each specific region. 
+# You use the Fn::FindInMap intrinsic function to retrieve values in a map.
+# You cannot include parameters, pseudo parameters, or intrinsic functions in the Mappings section.
+Mappings:
+  AWSAMIRegionMap:
+    AMI:
+      AMZNECSHVM: amzn-ami-2018.03.o-amazon-ecs-optimized
+    ap-northeast-1:
+      AMZNECSHVM: ami-084cb340923dc7101
+    ap-southeast-1:
+      AMZNECSHVM: ami-0eb4239fe0f64fe58
+    ap-southeast-2:
+      AMZNECSHVM: ami-051b682e0d63cc816
+    ca-central-1:
+      AMZNECSHVM: ami-0d9198a587e83919b
+    eu-central-1:
+      AMZNECSHVM: ami-042ae7188819e7e9b
+    eu-west-1:
+      AMZNECSHVM: ami-00921cd1ce43d567a
+    eu-west-2:
+      AMZNECSHVM: ami-0e1065cc4f7231034
+    us-east-1:
+      AMZNECSHVM: ami-0a6a36557ea3b9859
+    us-east-2:
+      AMZNECSHVM: ami-0cca5d0eeadc8c3c4
+    us-west-1:
+      AMZNECSHVM: ami-066a6b3ae13abc046
+    us-west-2:
+      AMZNECSHVM: ami-0d2f82a622136a696
+# REQUIRED Resources section declares the AWS resources that you want to
+# include in the stack, such as an Amazon EC2 instance or an Amazon S3 bucket.
+Resources:
+  # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-cluster.html
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref EnvironmentName
+  # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-as-group.html
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: !Ref Subnets
+      LaunchConfigurationName: !Ref ECSLaunchConfiguration
+      MinSize: !Ref ClusterSize
+      MaxSize: !Ref ClusterSize
+      DesiredCapacity: !Ref ClusterSize
+      Tags:
+      - Key: Name
+        Value: !Sub ${EnvironmentName} ECS host
+        PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-updatepolicy.html
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
+  # Launch configuration that can be used by an Auto Scaling group to configure Amazon EC2 instances.        
+  # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-as-launchconfig.html
+  ECSLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId:
+        !FindInMap
+        - AWSAMIRegionMap
+        - !Ref AWS::Region
+        - AMZNECSHVM
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+      - !Ref SecurityGroup
+      IamInstanceProfile: !Ref ECSInstanceProfile
+      KeyName: !Ref KeyName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
+          /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSAutoScalingGroup
+    Metadata:
+      # Use the AWS::CloudFormation::Init type to include metadata on an Amazon EC2 instance for the 
+      # cfn-init helper script. If your template calls the cfn-init script, the script looks for 
+      # resource metadata rooted in the AWS::CloudFormation::Init metadata key.
+      # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-init.html
+      AWS::CloudFormation::Init:
+        # A single config set
+        config:
+          commands:
+            01_add_instance_to_cluster:
+              # Pushes the cluster name into the ecs.config file
+              command: !Sub echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+          # Helper scripts
+          # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-helper-scripts-reference.html
+          # files: You can use the files key to create files on the EC2 instance. 
+          files:
+            # see: cfn-hup: Use to check for updates to metadata and execute custom hooks when changes are detected.
+            /etc/cfn/cfn-hup.conf:
+              mode: 400
+              owner: root
+              group: root
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.ContainerInstances.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
+          services:
+            # You can use the services key to define which services should be 
+            # enabled or disabled when the instance is launched.
+            sysvinit:
+              cfn-hup:
+                enabled: true # ensure that the service will be started automatically upon boot.
+                ensureRunning: true #ensure that the service is running after cfn-init finishes.
+                files: # If cfn-init changes one directly via the files block, this service will be restarted
+                - /etc/cfn/cfn-hup.conf
+                - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+  # Defines a role for ECS to use on this instance for interaction with various AWS service
+  ECSRole:
+    # Creates an AWS Identity and Access Management (IAM) role. Use an IAM role to enable applications 
+    # running on an EC2 instance to securely access your AWS resources.
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: ConfigPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          # Policy for interactions needed with ECS
+          - Sid: ECS
+            Effect: Allow
+            Action:
+            - ecs:CreateCluster
+            - ecs:DeregisterContainerInstance
+            - ecs:DiscoverPollEndpoint
+            - ecs:Poll
+            - ecs:RegisterContainerInstance
+            - ecs:StartTelemetrySession
+            - ecs:Submit*
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - ecr:BatchCheckLayerAvailability
+            - ecr:BatchGetImage
+            - ecr:GetDownloadUrlForLayer
+            - ecr:GetAuthorizationToken
+            Resource: '*'
+          # Policy for interacting with DynamoDB
+          - Sid: DYNAMODB
+            Effect: Allow
+            Action:
+            - dynamodb:Query
+            - dynamodb:PutItem
+            - dynamodb:DescribeTable
+            - dynamodb:DeleteTable
+            - dynamodb:GetItem
+            - dynamodb:CreateTable
+            - dynamodb:Scan
+            Resource: '*'
+          # Policy to allow interaction with IAM
+          - Sid: IAM
+            Effect: Allow
+            Action:
+            - iam:AttachRolePolicy
+            - iam:CreatePolicy
+            - iam:CreatePolicyVersion
+            - iam:CreateRole
+            - iam:DeletePolicy
+            - iam:DeletePolicyVersion
+            - iam:DeleteRole
+            - iam:DeleteRolePolicy
+            - iam:DetachRolePolicy
+            - iam:GetPolicy
+            - iam:GetPolicyVersion
+            - iam:GetRole
+            - iam:GetRolePolicy
+            - iam:PassRole
+            Resource: '*'
+          # Policy for interacting with Cognito Identity Pools
+          - Sid: CognitoIdentity
+            Effect: Allow
+            Action:
+            - cognito-identity:CreateIdentityPool
+            - cognito-identity:DeleteIdentityPool
+            - cognito-identity:DeleteIdentities
+            - cognito-identity:DescribeIdentity
+            - cognito-identity:DescribeIdentityPool
+            - cognito-identity:GetIdentityPoolRoles
+            - cognito-identity:GetOpenIdTokenForDeveloperIdentity
+            - cognito-identity:ListIdentities
+            - cognito-identity:ListIdentityPools
+            - cognito-identity:LookupDeveloperIdentity
+            - cognito-identity:MergeDeveloperIdentities
+            - cognito-identity:SetIdentityPoolRoles
+            - cognito-identity:UnlinkDeveloperIdentity
+            - cognito-identity:UpdateIdentityPool
+            Resource: '*'
+          # Policy for interacting with Cognito User Pools
+          - Sid: CognitoUP
+            Effect: Allow
+            Action:
+            - cognito-idp:CreateUserPool
+            - cognito-idp:CreateUserPoolClient
+            - cognito-idp:AdminCreateUser
+            - cognito-idp:AdminDeleteUser
+            - cognito-idp:DeleteUserPool
+            - cognito-idp:AdminGetUser
+            Resource: '*'
+          # Policy for apigw interactions
+          - Sid: APIGatewayKeysCertificates
+            Effect: Allow
+            Action:
+            - apigateway:GET
+            - apigateway:HEAD
+            - apigateway:OPTIONS
+            Resource:
+            - arn:aws:apigateway:us-east-1::/clientcertificates/*
+            - arn:aws:apigateway:us-east-1::/domainnames/*
+            - arn:aws:apigateway:us-east-1::/apikeys/*
+  ECSInstanceProfile:
+    # Creates an AWS Identity and Access Management (IAM) 
+    # instance profile that can be used with IAM roles for EC2 instances.
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-instanceprofile.html
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+      - !Ref ECSRole
+Outputs:
+  Cluster:
+    Description: A reference to the ECS cluster
+    Value: !Ref ECSCluster
+...

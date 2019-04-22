@@ -83,7 +83,7 @@ app.get('/user/health', function (req, res) {
 /**
  * WARNING: THIS WILL REMOVE THE DYNAMODB TABLES FOR THIS QUICKSTART.
  * NOTE: In production, it is recommendended to have a backup of all Tables, and only manage these tables from corresponding micro-services.
- * Delete DynamoDB Tables required for the Infrastructure including the User, Tenant, Product, and Order Tables.
+ * Delete DynamoDB Tables required for the Infrastructure including the User, Tenant Tables.
  */
 app.delete('/user/tables', function (req, res) {
 
@@ -101,23 +101,7 @@ app.delete('/user/tables', function (req, res) {
             .catch(function(err) {
                 res.status(400).send("Error deleting " + configuration.table.tenant + err.message);
             });
-        // Delete Product Table
-        cognitoUsers.deleteTable(configuration.table.product)
-            .then(function(response) {
-            })
-            .catch(function(err) {
-                res.status(400).send("Error deleting " + configuration.table.product + err.message);
-            });
-        // Delete Order Table
-        cognitoUsers.deleteTable(configuration.table.order)
-            .then(function(response) {
-            })
-            .catch(function(err) {
-                res.status(400).send("Error deleting " + configuration.table.order + err.message);
-            });
-
-            res.status(200).send('Initiated removal of DynamoDB Tables');
-
+        
 });
 
 
@@ -497,9 +481,7 @@ function provisionAdminUserWithRoles(user, credentials, adminPolicyName, userPol
         accountId: configuration.aws_account,
         region: configuration.aws_region,
         tenantTableName: configuration.table.tenant,
-        userTableName: configuration.table.user,
-        productTableName: configuration.table.product,
-        orderTableName: configuration.table.order
+        userTableName: configuration.table.user
     };
 
     // init role based on admin policy name

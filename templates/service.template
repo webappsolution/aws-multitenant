@@ -1,6 +1,6 @@
 ---
 Description: CloudFormation Template to spin up ECS Service, Task Definition, Target
-  Group, and ALB Path for Multi-Tenant Micro-Service. (qs-1nlegmi3t)
+  Group, and ALB Path for Multi-Tenant Micro-Service
 Parameters:
   VPC:
     Description: The VPC that the ECS cluster is deployed to
@@ -27,12 +27,6 @@ Parameters:
     Type: String
   TenantTable:
     Description: The DynamoDB Tenant Table
-    Type: String
-  ProductTable:
-    Description: The DynamoDB Product Table
-    Type: String
-  OrderTable:
-    Description: The DynamoDB Order Table
     Type: String
   NodeEnv:
     Description: The string used to configure the environment type. 'production',
@@ -101,10 +95,6 @@ Resources:
           Value: !Ref UserTable
         - Name: TENANT_TABLE
           Value: !Ref TenantTable
-        - Name: PRODUCT_TABLE
-          Value: !Ref ProductTable
-        - Name: ORDER_TABLE
-          Value: !Ref OrderTable
         PortMappings:
         - ContainerPort: !Ref ContainerPort
         LogConfiguration:

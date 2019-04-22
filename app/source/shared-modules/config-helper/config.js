@@ -19,7 +19,7 @@ module.exports.configure = function(environment) {
         switch(environment) {
         case "production":
 
-            if(process.env.AWS_REGION == undefined || process.env.SERVICE_URL == undefined || process.env.SNS_ROLE_ARN == undefined || process.env.AWS_ACCOUNT_ID == undefined || process.env.USER_TABLE == undefined || process.env.TENANT_TABLE == undefined || process.env.PRODUCT_TABLE == undefined || process.env.ORDER_TABLE == undefined)
+            if(process.env.AWS_REGION == undefined || process.env.SERVICE_URL == undefined || process.env.SNS_ROLE_ARN == undefined || process.env.AWS_ACCOUNT_ID == undefined || process.env.USER_TABLE == undefined || process.env.TENANT_TABLE == undefined)
             {
                 var error = "Production Environment Variables Not Properly Configured. \nPlease ensure AWS_REGION, SERVCE_URL, SNS_ROLE_ARN, AWS_ACCOUNT_ID environment Variables are set."
                 throw error;
@@ -41,9 +41,7 @@ module.exports.configure = function(environment) {
                     name: name,
                     table: {
                         user: process.env.USER_TABLE,
-                        tenant: process.env.TENANT_TABLE,
-                        product: process.env.PRODUCT_TABLE,
-                        order: process.env.ORDER_TABLE
+                        tenant: process.env.TENANT_TABLE
                     },
                     userRole: prod.userRole,
                     role: {
@@ -55,10 +53,8 @@ module.exports.configure = function(environment) {
                     url: {
                         tenant: prod.protocol + process.env.SERVICE_URL + '/tenant',
                         user: prod.protocol + process.env.SERVICE_URL + '/user',
-                        product: prod.protocol + process.env.SERVICE_URL + '/product',
                         reg: prod.protocol + process.env.SERVICE_URL + '/reg',
                         auth: prod.protocol + process.env.SERVICE_URL + '/auth',
-                        order: prod.protocol + process.env.SERVICE_URL + '/order',
                         sys: prod.protocol + process.env.SERVICE_URL + '/sys'
                     }
                 }
@@ -87,11 +83,9 @@ module.exports.configure = function(environment) {
                 url: {
                     tenant: dev.protocol + dev.domain + ':' + port.tenant + '/tenant',
                     user: dev.protocol + dev.domain + ':' + port.user +  '/user',
-                    product: dev.protocol + dev.domain + ':' + port.product + '/product',
                     reg: dev.protocol + dev.domain + ':' + port.reg + '/reg',
                     auth: dev.protocol + dev.domain + ':' + port.auth + '/auth',
-                    sys: dev.protocol + dev.domain + ':' + port.sys + '/sys',
-                    order: dev.protocol + dev.domain + ':' + port.order + '/order'
+                    sys: dev.protocol + dev.domain + ':' + port.sys + '/sys'
                 }
             }
 

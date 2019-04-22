@@ -1,0 +1,176 @@
+---
+Description: This template deploys IAM Roles required for other cloudformation templates.
+# OPTIONAL Parameters section to customize your templates.
+# Parameters enable you to input custom values to your template each
+# time you create or update a stack. 
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+# REQUIRED Resources section declares the AWS resources that you want to
+# include in the stack, such as an Amazon EC2 instance or an Amazon S3 bucket.    
+Resources:
+  # This role is granting access to lambda to all resources used in the complete stack
+  CleanupRole:
+    Type: AWS::IAM::Role
+    # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html#w2ab1c21c10d159c37c11
+    Properties:
+      # Paths, in this context, allow nesting of roles. EG: they can match organizational structure
+      # see: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#Identifiers_FriendlyNames
+      Path: /
+      # This role can only be used by lambda
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      # List of inline policies that define the role
+      - PolicyName: ConfigPolicy
+        # see: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Sid: Logging
+            Effect: Allow
+            Action: logs:*
+            Resource: '*'
+          - Sid: ECR
+            Effect: Allow
+            Action: ecr:*
+            Resource: '*'
+          - Sid: ECS
+            Effect: Allow
+            Action: ecs:*
+            Resource: '*'
+          - Sid: EC2
+            Effect: Allow
+            Action: ec2:*
+            Resource: '*'
+          - Sid: ELB
+            Effect: Allow
+            Action: elasticloadbalancing:*
+            Resource: '*'
+          - Sid: CFN
+            Effect: Allow
+            Action: cloudformation:*
+            Resource: '*'
+          - Sid: S3
+            Effect: Allow
+            Action: s3:*
+            Resource: '*'
+          - Sid: IAM
+            Effect: Allow
+            Action: iam:*
+            Resource: '*'
+  # This role is allowing SNS publish access on all topics for cognito 
+  SNSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: cognito-idp.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      # Intrinsic function subs in the environment name string to keep policy name unique
+      - PolicyName: !Sub ${EnvironmentName}-SNSRolePolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Sid: SNS
+            Effect: Allow
+            Action: sns:publish
+            Resource: '*'
+  # This grants apiGW lambda invocation access      
+  ApiAuthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: apigateway.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: !Sub ${EnvironmentName}-ApiAuthPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Sid: SNS
+            Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: '*'
+  # This grants lambda access to SNS logs
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: !Sub ${EnvironmentName}-LambdaAuthPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Sid: SNS
+            Effect: Allow
+            Action: logs:*
+            Resource: arn:aws:logs:*:*:*
+  # This grants cloudformation full access to ecs, ecr, iam, s3, ec2, elb, logs            
+  CloudFormationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: cloudformation.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: !Sub ${EnvironmentName}-CfnExecRole
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Resource: '*'
+            Effect: Allow
+            Action:
+            - ecs:*
+            - ecr:*
+            - iam:*
+            - s3:*
+            - ec2:*
+            - elasticloadbalancing:*
+            - logs:*
+# Make the following accessible to other scripts            
+Outputs:
+  SNSRoleArn:
+    Description: A reference to the Role Arn of the SNSRole
+    Value: !GetAtt SNSRole.Arn
+  LambdaInvocationRole:
+    Description: A reference to the Role Arn of the ApiAuthRole
+    Value: !GetAtt ApiAuthRole.Arn
+  LambdaExecutionRole:
+    Description: A reference to the Role Arn of the LambdaAuthRole
+    Value: !GetAtt LambdaExecutionRole.Arn
+  CleanupRole:
+    Description: A reference to the Role Arn of the LambdaAuthRole
+    Value: !GetAtt CleanupRole.Arn
+  CloudFormationExecutionRole:
+    Description: A reference to the Role Arn of the CloudFormationExecutionRole
+    Value: !GetAtt CloudFormationExecutionRole.Arn
+...

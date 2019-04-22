@@ -162,7 +162,7 @@ module.exports.createUserPool = function (tenantId) {
         var SnsArn = configuration.role.sns;
         //Invite Message:
         var inviteMessage = '<img src="https://d0.awsstatic.com/partner-network/logo_apn.png" alt="AWSPartner"> <br><br>Welcome to the AWS QuickStart for SaaS Identity, featuring Cognito. <br><br>Login to the Multi-Tenant Identity Reference Architecture. <br><br>Username: {username} <br><br>Password: {####}';
-        var emailSubject = 'AWS-QuickStart-SaaS-Identity-Cognito';
+        var emailSubject = 'AWS-Labx-CloudFormation';
         // init JSON structure with pool settings
         var params = {
             PoolName: tenantId, /* required */
@@ -422,9 +422,7 @@ module.exports.getPolicyTemplate = function(policyType, policyConfig) {
         arnPrefix: arnPrefix,
         cognitoArn: cognitoArn,
         tenantTableArn: databaseArnPrefix + policyConfig.tenantTableName,
-        userTableArn: databaseArnPrefix + policyConfig.userTableName,
-        productTableArn: databaseArnPrefix + policyConfig.productTableName,
-        orderTableArn: databaseArnPrefix + policyConfig.orderTableName
+        userTableArn: databaseArnPrefix + policyConfig.userTableName
     }
 
     if (policyType === configuration.userRole.systemAdmin)
@@ -499,50 +497,6 @@ function getTenantAdminPolicy(policyParams) {
                 }
             },
             {
-                "Sid": "TenantAdminOrderTable",
-                "Effect": "Allow",
-                "Action": [
-                    "dynamodb:GetItem",
-                    "dynamodb:BatchGetItem",
-                    "dynamodb:Query",
-                    "dynamodb:PutItem",
-                    "dynamodb:UpdateItem",
-                    "dynamodb:DeleteItem",
-                    "dynamodb:BatchWriteItem",
-                    "dynamodb:DescribeTable",
-                    "dynamodb:CreateTable"
-
-                ],
-                "Resource": [policyParams.orderTableArn],
-                "Condition": {
-                    "ForAllValues:StringEquals": {
-                        "dynamodb:LeadingKeys": [policyParams.tenantId]
-                    }
-                }
-            },
-            {
-                "Sid": "TenantAdminProductTable",
-                "Effect": "Allow",
-                "Action": [
-                    "dynamodb:GetItem",
-                    "dynamodb:BatchGetItem",
-                    "dynamodb:Query",
-                    "dynamodb:PutItem",
-                    "dynamodb:UpdateItem",
-                    "dynamodb:DeleteItem",
-                    "dynamodb:BatchWriteItem",
-                    "dynamodb:DescribeTable",
-                    "dynamodb:CreateTable"
-
-                ],
-                "Resource": [policyParams.productTableArn],
-                "Condition": {
-                    "ForAllValues:StringEquals": {
-                        "dynamodb:LeadingKeys": [policyParams.tenantId]
-                    }
-                }
-            },
-            {
                 "Sid": "TenantCognitoAccess",
                 "Effect": "Allow",
                 "Action": [
@@ -591,46 +545,6 @@ function getTenantUserPolicy(policyParams) {
 
             },
             {
-                "Sid": "ReadWriteOrderTable",
-                "Effect": "Allow",
-                "Action": [
-                    "dynamodb:GetItem",
-                    "dynamodb:BatchGetItem",
-                    "dynamodb:Query",
-                    "dynamodb:PutItem",
-                    "dynamodb:UpdateItem",
-                    "dynamodb:DeleteItem",
-                    "dynamodb:BatchWriteItem",
-                    "dynamodb:DescribeTable",
-                    "dynamodb:CreateTable"
-
-                ],
-                "Resource": [policyParams.orderTableArn],
-                "Condition": {
-                    "ForAllValues:StringEquals": {
-                        "dynamodb:LeadingKeys": [policyParams.tenantId]
-                    }
-                }
-            },
-            {
-                "Sid": "TenantReadOnlyProductTable",
-                "Effect": "Allow",
-                "Action": [
-                    "dynamodb:GetItem",
-                    "dynamodb:BatchGetItem",
-                    "dynamodb:Query",
-                    "dynamodb:DescribeTable",
-                    "dynamodb:CreateTable"
-
-                ],
-                "Resource": [policyParams.productTableArn],
-                "Condition": {
-                    "ForAllValues:StringEquals": {
-                        "dynamodb:LeadingKeys": [policyParams.tenantId]
-                    }
-                }
-            },
-            {
                 "Sid": "TenantCognitoAccess",
                 "Effect": "Allow",
                 "Action": [
@@ -665,21 +579,6 @@ function getSystemAdminPolicy(policyParams) {
                 "Effect": "Allow",
                 "Action": ["dynamodb:*"],
                 "Resource": [policyParams.userTableArn, policyParams.userTableArn + '/*']
-            },
-            {
-                "Sid": "TenantSystemAdminOrderTable",
-                "Effect": "Allow",
-                "Action": ["dynamodb:*"],
-                "Resource": [policyParams.orderTableArn]
-            },
-            {
-                "Sid": "TenantSystemAdminProductTable",
-                "Effect": "Allow",
-                "Action": [
-                    "dynamodb:*",
-                    "dynamodb:DescribeTable"
-                ],
-                "Resource": [policyParams.productTableArn]
             },
             {
                 "Sid": "FullCognitoFederatedIdentityAccess",
@@ -734,34 +633,6 @@ function getSystemUserPolicy(policyParams) {
 
                 ],
                 "Resource": [policyParams.userTableArn]
-            },
-            {
-                "Sid": "TenantSystemUserOrderTable",
-                "Effect": "Allow",
-                "Action": [
-                    "dynamodb:GetItem",
-                    "dynamodb:BatchGetItem",
-                    "dynamodb:Scan",
-                    "dynamodb:Query",
-                    "dynamodb:DescribeTable",
-                    "dynamodb:CreateTable"
-
-                ],
-                "Resource": [policyParams.orderTableArn]
-            },
-            {
-                "Sid": "TenantSystemUserProductTable",
-                "Effect": "Allow",
-                "Action": [
-                    "dynamodb:GetItem",
-                    "dynamodb:BatchGetItem",
-                    "dynamodb:Scan",
-                    "dynamodb:Query",
-                    "dynamodb:DescribeTable",
-                    "dynamodb:CreateTable"
-
-                ],
-                "Resource": [policyParams.productTableArn]
             },
             {
                 "Sid": "FullReadCognitoIdentityAccess",
