@@ -169,8 +169,7 @@ Parameters:
       AllowedPattern: ^[0-9a-zA-Z-/]*$
       ConstraintDescription:
          Di Configuration key prefix can include numbers, lowercase letters,
-         uppercase letters, hyphens (-), and a forward slash (/) at the end of
-         the prefix.
+         uppercase letters, or hyphens (-).
       Description:
          S3 key prefix for the Di Configuration assets. Di Configuration key
          prefix can include numbers, lowercase letters, uppercase letters,
