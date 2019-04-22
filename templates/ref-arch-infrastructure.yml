@@ -174,7 +174,7 @@ Resources:
   SecurityGroups:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-security-groups.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-security-groups.yml
       Parameters:
         EnvironmentName: !Ref AWS::StackName
         VPC: !Ref VPCID
@@ -182,7 +182,7 @@ Resources:
   ALB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-load-balancers.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-load-balancers.yml
       Parameters:
         EnvironmentName: !Ref AWS::StackName
         VPC: !Ref VPCID
@@ -198,7 +198,7 @@ Resources:
   ECS:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-ecs-cluster.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-ecs-cluster.yml
       Parameters:
         EnvironmentName: !Ref AWS::StackName
         InstanceType: !Ref InstanceType
@@ -217,7 +217,7 @@ Resources:
   Role:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-roles.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-roles.yml
       Parameters:
         EnvironmentName: !Ref AWS::StackName
 
@@ -225,7 +225,7 @@ Resources:
   API:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-api-gateway.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-api-gateway.yml
       Parameters:
         EnvironmentName: !Ref AWS::StackName
         LambdaInvocationRole: !GetAtt Role.Outputs.LambdaInvocationRole
@@ -246,7 +246,7 @@ Resources:
   # WebClient:
   #   Type: AWS::CloudFormation::Stack
   #   Properties:
-  #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-web-deployment-pipeline.yml
+  #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-web-deployment-pipeline.yml
   #     Parameters:
   #       ServiceUrl: !GetAtt API.Outputs.RootUrl
   #       ServiceName: client
@@ -270,19 +270,19 @@ Resources:
   # WebPerm:
   #   Type: AWS::CloudFormation::Stack
   #   Properties:
-  #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-bucket-public-read.yml
+  #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-bucket-public-read.yml
   #     Parameters:
   #       Bucket: !GetAtt WebClient.Outputs.WebBucket
   # Creates an ECR and a bucket for images
   BucketRepository:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-docker-bucket-repository.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-docker-bucket-repository.yml
   # Creates the Dynamo table for app
   DynamoDBTables:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-dynamodb-tables.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-dynamodb-tables.yml
       Parameters:
         UserTableName: !Ref UserTable
         TenantTableName: !Ref TenantTable
@@ -300,7 +300,7 @@ Resources:
   UserService:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-deployment-pipeline-test.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-deployment-pipeline-test.yml
       Parameters:
         VPC: !Ref VPCID
         Cluster: !GetAtt ECS.Outputs.Cluster
@@ -326,7 +326,7 @@ Resources:
     - UserService
     - WaitConditionUserService
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-deployment-pipeline-test.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-deployment-pipeline-test.yml
       Parameters:
         VPC: !Ref VPCID
         Cluster: !GetAtt ECS.Outputs.Cluster
@@ -352,7 +352,7 @@ Resources:
     - AuthService
     - WaitConditionAuthService
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-deployment-pipeline-test.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-deployment-pipeline-test.yml
       Parameters:
         VPC: !Ref VPCID
         Cluster: !GetAtt ECS.Outputs.Cluster
@@ -378,7 +378,7 @@ Resources:
     - TenantService
     - WaitConditionTenantService
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-deployment-pipeline-test.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-deployment-pipeline-test.yml
       Parameters:
         VPC: !Ref VPCID
         Cluster: !GetAtt ECS.Outputs.Cluster
@@ -404,7 +404,7 @@ Resources:
     - RegService
     - WaitConditionRegService
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-deployment-pipeline-test.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-deployment-pipeline-test.yml
       Parameters:
         VPC: !Ref VPCID
         Cluster: !GetAtt ECS.Outputs.Cluster
@@ -475,7 +475,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: Role
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-clean-cfnstack.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-clean-cfnstack.yml
       Parameters:
         ServiceToken: !GetAtt Role.Outputs.CleanupRole
         Stack: !GetAtt UserService.Outputs.ServiceStack
@@ -483,7 +483,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: Role
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-clean-cfnstack.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-clean-cfnstack.yml
       Parameters:
         ServiceToken: !GetAtt Role.Outputs.CleanupRole
         Stack: !GetAtt AuthService.Outputs.ServiceStack
@@ -491,7 +491,7 @@ Resources:
     DependsOn: Role
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-clean-cfnstack.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-clean-cfnstack.yml
       Parameters:
         ServiceToken: !GetAtt Role.Outputs.CleanupRole
         Stack: !GetAtt TenantService.Outputs.ServiceStack
@@ -499,7 +499,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: Role
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-clean-cfnstack.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-clean-cfnstack.yml
       Parameters:
         ServiceToken: !GetAtt Role.Outputs.CleanupRole
         Stack: !GetAtt RegService.Outputs.ServiceStack
@@ -507,7 +507,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: Role
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-clean-cfnstack.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-clean-cfnstack.yml
       Parameters:
         ServiceToken: !GetAtt Role.Outputs.CleanupRole
         Stack: !GetAtt SysService.Outputs.ServiceStack
@@ -516,7 +516,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: Role
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-cleanup-bucket-repository.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-cleanup-bucket-repository.yml
       Parameters:
         Bucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
@@ -529,7 +529,7 @@ Resources:
   #   Type: AWS::CloudFormation::Stack
   #   DependsOn: Role
   #   Properties:
-  #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-clean-bucket.yml
+  #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-clean-bucket.yml
   #     Parameters:
   #       Bucket: !GetAtt WebClient.Outputs.WebBucket
   #       ServiceToken: !GetAtt Role.Outputs.CleanupRole
@@ -537,7 +537,7 @@ Resources:
   #   Type: AWS::CloudFormation::Stack
   #   DependsOn: Role
   #   Properties:
-  #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-clean-bucket.yml
+  #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-clean-bucket.yml
   #     Parameters:
   #       Bucket: !GetAtt WebClient.Outputs.ArtifactBucket
   #       ServiceToken: !GetAtt Role.Outputs.CleanupRole
@@ -557,7 +557,7 @@ Resources:
     - SysService
     - SysAdminCleanup
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-rest-request-create.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-rest-request-create.yml
       Parameters:
         Domain: !GetAtt API.Outputs.RootUrl
         Protocol: https://
@@ -588,7 +588,7 @@ Resources:
     - SysServiceCleanup
     - BucketRepositoryCleanup
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-rest-request-delete.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-rest-request-delete.yml
       Parameters:
         Domain: !GetAtt ALB.Outputs.LoadBalancerUrl
         Protocol: http://

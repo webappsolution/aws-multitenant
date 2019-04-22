@@ -34,7 +34,7 @@ Resources:
     # see: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-dependson.html
     DependsOn: DestinationBucket
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-copy-files.template
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-copy-files.template
       Parameters:
         # NOTE: all of the values are passed in from infrastructure template
         TemplateBucket: !Ref QSS3BucketName

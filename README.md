@@ -8,9 +8,15 @@ This Deployment deploys the SaaS architecture into a virtual private cloud (VPC)
 
 # Setup
 
-- Copy the contents of the Git repository to a bucket of the format: **QSS3BucketName/QSS3KeyPrefix**
+- Create a bucket and sub-bucket in the region where the stack will be deployed. **If the bucket isn't in the same region, the deployment will fail.**
+
+- The bucket/sub-bucket name format will be: **QSS3BucketName/QSS3KeyPrefix**
     
-    **EG: dev-deployment/stacks**
+    **EG: dev-deployment-east-1/stacks**
+
+- In the example QSS3BucketName = dev-deployment-east-1 and QSS3KeyPrefix = stacks. These values will be used in the start page. 
+
+- Copy the contents of the Git repo to bucket/sub-bucket folder created.
 
 - In the AWS Console, use the second radio option for creating a Stack
 

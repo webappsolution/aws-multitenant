@@ -33,7 +33,7 @@ Metadata:
               default:
                  "DI Reference Arch Stacks Location in S3. Nested stacks for
                  this deployment will need to reside at a location similar to:
-                 https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/xxxx.template"
+                 https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/xxxx.template"
            Parameters:
               - QSS3BucketName
               - QSS3KeyPrefix
@@ -153,7 +153,7 @@ Parameters:
          CIDR Block for the public DMZ subnet 2 located in Availability Zone 2
       Type: String
    # Nested stacks for this deployment will need to reside at a location similar to:
-   # https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/xxxx.template
+   # https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/xxxx.template
    QSS3BucketName:
       AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
       ConstraintDescription:
@@ -227,7 +227,7 @@ Resources:
          # Template files can use any extension, such as .json, .yaml, .template, or .txt.
          # The template must be stored on an Amazon S3 bucket, so the URL must have
          # the form: https://s3.amazonaws.com/.../TemplateName.extension
-         TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-vpc.yml
+         TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-vpc.yml
          # The set of parameters passed via !Ref to AWS CloudFormation when this nested stack is created.
          Parameters:
             AvailabilityZones: !Join
@@ -245,7 +245,7 @@ Resources:
       DependsOn: VPCStack
       Type: AWS::CloudFormation::Stack
       Properties:
-         TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-infrastructure.yml
+         TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-infrastructure.yml
          Parameters:
             KeyPairName: !Ref KeyPairName
             InstanceType: !Ref InstanceType

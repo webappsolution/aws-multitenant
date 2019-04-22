@@ -22,14 +22,14 @@ Resources:
   BucketCleanup:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-clean-bucket.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-clean-bucket.yml
       Parameters:
         Bucket: !Ref Bucket
         ServiceToken: !Ref RoleArn
   RepositoryCleanup:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/ref-arch-clean-repository.yml
+      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/templates/ref-arch-clean-repository.yml
       Parameters:
         Repository: !Ref Repository
         ServiceToken: !Ref RoleArn
